@@ -1,10 +1,10 @@
-# Wygenerowane przez panel dla probaauto.frugoslaw.ovh.
+# Wygenerowane przez panel dla testowastrona.frugoslaw.ovh.
 # Zapisz jako .github/workflows/deploy.yml w repozytorium.
 #
 # Sekrety w repo:
 #   FORGE_SSH_KEY       — klucz prywatny ze skrzynki „Klucz deployowy” w panelu
-#   FORGE_DEPLOY_TOKEN_PROBAAUTO  — token webhooka z tej samej skrzynki
-name: Deploy probaauto.frugoslaw.ovh
+#   FORGE_DEPLOY_TOKEN  — token webhooka z tej samej skrzynki
+name: Deploy testowastrona.frugoslaw.ovh
 
 on:
   push:
@@ -13,7 +13,7 @@ on:
 
 # Dwa deploye naraz nadpisywałyby sobie katalog incoming/.
 concurrency:
-  group: deploy-probaauto-frugoslaw-ovh
+  group: deploy-testowastrona-frugoslaw-ovh
   cancel-in-progress: true
 
 jobs:
@@ -44,15 +44,15 @@ jobs:
         run: |
           rsync -az --delete \
             -e "ssh -i ~/.ssh/deploy -p 10168 -o StrictHostKeyChecking=yes" \
-            dist/ deploy@jola168.mikrus.xyz:/srv/sites/probaauto.frugoslaw.ovh/incoming/
+            dist/ deploy@jola168.mikrus.xyz:/srv/sites/testowastrona.frugoslaw.ovh/incoming/
 
       # Publikację wołamy przez SSH, nie po HTTPS: panel stoi za Cloudflare
       # z Bot Fight Mode, który odrzuca żądania z adresów datacenter, czyli
       # ze wszystkich runnerów GitHuba.
       - name: Publikacja wydania
         env:
-          TOKEN: ${{ secrets.FORGE_DEPLOY_TOKEN_PROBAAUTO }}
+          TOKEN: ${{ secrets.FORGE_DEPLOY_TOKEN }}
         run: |
           ssh -i ~/.ssh/deploy -p 10168 -o StrictHostKeyChecking=yes \
             deploy@jola168.mikrus.xyz \
-            "curl -fsS --max-time 300 -X POST http://127.0.0.1:3009/hook/deploy/probaauto-frugoslaw-ovh -H 'X-Forge-Token: $TOKEN'"
+            "curl -fsS --max-time 300 -X POST http://127.0.0.1:3009/hook/deploy/testowastrona-frugoslaw-ovh -H 'X-Forge-Token: $TOKEN'"
