@@ -1,5 +1,5 @@
 # Wygenerowane przez panel dla testowastrona.frugoslaw.ovh.
-# Zapisz jako .github/workflows/deploy.yml w repozytorium.
+# Plik nazywa się od strony, bo jedno repozytorium bywa źródłem kilku.
 #
 # Sekrety w repo:
 #   FORGE_SSH_KEY       — klucz prywatny ze skrzynki „Klucz deployowy” w panelu
@@ -19,21 +19,19 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
+
+      # pnpm musi być na ścieżce zanim ruszy setup-node — inaczej cache pnpm
+      # nie ma jak odnaleźć magazynu paczek.
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
 
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-
           cache: pnpm
-{{#app_path}}
-          cache-dependency-path: /pnpm-lock.yaml
-{{/app_path}}
-
-      - uses: pnpm/action-setup@v4
-        with: { version: 9 }
 
       - run: pnpm install --frozen-lockfile
       - run: npm run build
