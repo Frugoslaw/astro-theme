@@ -1,0 +1,65 @@
+# Wygenerowane przez panel dla testowastrona.frugoslaw.ovh.
+# Zapisz jako .github/workflows/deploy.yml w repozytorium.
+#
+# Sekrety w repo:
+#   FORGE_SSH_KEY       — klucz prywatny ze skrzynki „Klucz deployowy” w panelu
+#   FORGE_DEPLOY_TOKEN_TESTOWASTRONA  — token webhooka z tej samej skrzynki
+name: Deploy testowastrona.frugoslaw.ovh
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Dwa deploye naraz nadpisywałyby sobie katalog incoming/.
+concurrency:
+  group: deploy-testowastrona-frugoslaw-ovh
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+          cache: pnpm
+{{#app_path}}
+          cache-dependency-path: /pnpm-lock.yaml
+{{/app_path}}
+
+      - uses: pnpm/action-setup@v4
+        with: { version: 9 }
+
+      - run: pnpm install --frozen-lockfile
+      - run: npm run build
+
+      - name: Klucz SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.FORGE_SSH_KEY }}" > ~/.ssh/deploy
+          chmod 600 ~/.ssh/deploy
+          ssh-keyscan -p 10168 jola168.mikrus.xyz >> ~/.ssh/known_hosts 2>/dev/null
+
+      # Budujemy w CI, bo na 1 vCPU/1 GB build Astro trwałby wielokrotnie
+      # dłużej i konkurował o pamięć z działającymi stronami.
+      - name: Wysyłka artefaktu
+        run: |
+          rsync -az --delete \
+            -e "ssh -i ~/.ssh/deploy -p 10168 -o StrictHostKeyChecking=yes" \
+            dist/ deploy@jola168.mikrus.xyz:/srv/sites/testowastrona.frugoslaw.ovh/incoming/
+
+      # Publikację wołamy przez SSH, nie po HTTPS: panel stoi za Cloudflare
+      # z Bot Fight Mode, który odrzuca żądania z adresów datacenter, czyli
+      # ze wszystkich runnerów GitHuba.
+      - name: Publikacja wydania
+        env:
+          TOKEN: ${{ secrets.FORGE_DEPLOY_TOKEN_TESTOWASTRONA }}
+        run: |
+          ssh -i ~/.ssh/deploy -p 10168 -o StrictHostKeyChecking=yes \
+            deploy@jola168.mikrus.xyz \
+            "curl -fsS --max-time 300 -X POST http://127.0.0.1:3009/hook/deploy/testowastrona-frugoslaw-ovh -H 'X-Forge-Token: $TOKEN'"
